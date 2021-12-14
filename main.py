@@ -25,20 +25,10 @@ def random_action(channel, action=None, **kwargs):
     """
     # Create a new CoinBot
     random_bot = RandomBot(channel)
-
-    if action == "coin":
-        message = random_bot.flip_coin()
-    elif action == "die":
-        sides = kwargs.get("sides", None)
-        if sides is None or isinstance(sides, int) is False:
-            message = random_bot.roll_die()
-        else:
-            print(f"We got here. Sides: {sides}")
-            message = random_bot.roll_die(sides)
-    elif action == "card":
-        message = random_bot.random_card()
-    elif action == "daily":
+    if action == "daily":
         message = random_bot.get_daily_data()
+    elif action == "monthly":
+        message = random_bot.get_monthly_data()
 
     # Post the onboarding message in Slack
     slack_web_client.chat_postMessage(**message)
@@ -58,45 +48,18 @@ def message(payload):
     # Get the text from the event that came through
     text = event.get("text")
 
-    # Check and see if the activation phrase was in the text of the message.
-    # If so, execute the code to flip a coin.
-    if "flip a coin" in text.lower():
-        # Since the activation phrase was met, get the channel ID that the event
-        # was executed on
-        channel_id = event.get("channel")
-        # Execute the random action as a coin flip
-        return random_action(channel_id, action="coin")
-    elif "daily data" in text.lower():
+    if "daily data" in text.lower():
         # Since the activation phrase was met, get the channel ID that the event
         # was executed on
         channel_id = event.get("channel")
         # Fetch daily data
         return random_action(channel_id, action="daily")
-    elif "roll a die" in text.lower() or "roll a dice" in text.lower():
+    elif "monthly data" in text.lower():
         # Since the activation phrase was met, get the channel ID that the event
         # was executed on
         channel_id = event.get("channel")
-        # Execute the random action as a coin flip
-        return random_action(channel_id, action="die")
-    elif "pick a card" in text.lower() or "choose a card" in text.lower():
-        # Since the activation phrase was met, get the channel ID that the event
-        # was executed on
-        channel_id = event.get("channel")
-        # Execute the random action as a coin flip
-        return random_action(channel_id, action="card")
-    elif "roll a d" in text.lower():
-        # Since the activation phrase was met, get the channel ID that the event
-        # was executed on
-        channel_id = event.get("channel")
-
-        # Strip out the number from the command
-        droll = text.split("roll a")[1].strip().split()[0]
-        try:
-            int(droll[1:])
-        except ValueError:
-            pass
-        else:
-            return random_action(channel_id, action="die", sides=int(droll[1:]))
+        # Fetch daily data
+        return random_action(channel_id, action="monthly")
 
 if __name__ == "__main__":
     # Create the logging object
