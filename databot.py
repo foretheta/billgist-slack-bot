@@ -1,8 +1,8 @@
 # import the random library to help us generate the random numbers
 import random
 
-# Create the RandomBot Class
-class RandomBot:
+# Create the DataBot Class
+class DataBot:
 
     # Create a constant that contains the default text for the message
     MESSAGE_BLOCK = {

@@ -3,7 +3,7 @@ import logging
 from flask import Flask
 from slack import WebClient
 from slackeventsapi import SlackEventAdapter
-from randombot import RandomBot
+from databot import DataBot
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -19,12 +19,12 @@ slack_events_adapter = SlackEventAdapter(os.environ.get("SLACK_EVENTS_TOKEN"), "
 # Initialize a Web API client
 slack_web_client = WebClient(token=os.environ.get("SLACKBOT_TOKEN"))
 
-def random_action(channel, action=None, **kwargs):
+def fetch_data_action(channel, action=None, **kwargs):
     """Determine which action to perform based on parameter. For roll die if
     a kwarg of sides is passed in and it's a valid integer roll a dSIDES die
     """
     # Create a new CoinBot
-    random_bot = RandomBot(channel)
+    random_bot = DataBot(channel)
     if action == "daily":
         message = random_bot.get_daily_data()
     elif action == "monthly":
@@ -53,13 +53,13 @@ def message(payload):
         # was executed on
         channel_id = event.get("channel")
         # Fetch daily data
-        return random_action(channel_id, action="daily")
+        return fetch_data_action(channel_id, action="daily")
     elif "monthly data" in text.lower():
         # Since the activation phrase was met, get the channel ID that the event
         # was executed on
         channel_id = event.get("channel")
         # Fetch daily data
-        return random_action(channel_id, action="monthly")
+        return fetch_data_action(channel_id, action="monthly")
 
 if __name__ == "__main__":
     # Create the logging object
