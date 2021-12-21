@@ -485,6 +485,9 @@ class DataBot:
     # parameter and then sets it as an instance variable
     def __init__(self, channel):
         self.channel = channel
+        self.integration = None
+        self.timestamp = ''
+
     # Fetch daily data for the user
     def get_daily_data(self):
         message = "This is daily data"
@@ -499,14 +502,49 @@ class DataBot:
 
     # Fetch daily data for the user
     def get_monthly_data(self):
-        monthly_total = self.MONTHLY_DATA["dbfb3f08-a6c3-4c76-a104-40f7a9d243d6"]["total"]
-        integration_name = self.MONTHLY_DATA["dbfb3f08-a6c3-4c76-a104-40f7a9d243d6"]["name"]
-        message = f"Integration {integration_name} has the monthly total of ${monthly_total}"
+        monthly_total = self.MONTHLY_DATA[self.integration]["total"]
+        integration_name = self.MONTHLY_DATA[self.integration]["name"]
+        credits = self.MONTHLY_DATA[self.integration]["credits_total"]
 
-        self.MESSAGE_BLOCK["text"]["text"] = message
+        monthly_text = {
+            'type': 'section',
+            'text': {
+                'type': 'mrkdwn',
+                'text': (
+                    "*Here is your monthly data! *  \n\n"
+                    f"Integration *{integration_name}* has the monthly total of ${monthly_total} \n\n"
+                    f"your total credits are: ${credits}"
+                    )
+            }
+        }
+
         return {
             "channel": self.channel,
             "blocks": [
-                self.MESSAGE_BLOCK
+                monthly_text
             ],
+        }
+
+    def set_integration(self, integration_id):
+        if integration_id == "dbfb3f08-a6c3-4c76-a104-40f7a9d243d6":
+            message = "*Integration ID has been set!*"
+            result = True
+            self.integration = integration_id
+        else:
+            message = "*Invalid integration ID, please send again!*"
+            result = False
+        return {
+            'result': result,
+            'message': {
+            'ts': self.timestamp,
+            'channel': self.channel,
+            'blocks': [
+            {
+                'type': 'section',
+                'text': {
+                    'type': 'mrkdwn',
+                    'text': message
+                }
+            }
+            ]}
         }

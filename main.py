@@ -4,6 +4,7 @@ from flask import Flask
 from slack import WebClient
 from slackeventsapi import SlackEventAdapter
 from databot import DataBot
+from welcome import WelcomeMessage
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -18,6 +19,9 @@ slack_events_adapter = SlackEventAdapter(os.environ.get("SLACK_EVENTS_TOKEN"), "
 
 # Initialize a Web API client
 slack_web_client = WebClient(token=os.environ.get("SLACKBOT_TOKEN"))
+BOT_ID = slack_web_client.api_call("auth.test")['user_id']
+welcome_messages = {}
+
 
 def fetch_data_action(channel, action=None, **kwargs):
     """Determine which action to perform based on parameter. For roll die if
@@ -33,6 +37,29 @@ def fetch_data_action(channel, action=None, **kwargs):
     # Post the onboarding message in Slack
     slack_web_client.chat_postMessage(**message)
 
+def send_welcome_message(channel, user):
+    if channel not in welcome_messages:
+        welcome_messages[channel] = {}
+    if user in welcome_messages[channel]:
+        return
+    welcome = WelcomeMessage(channel, user)
+    message = welcome.get_message()
+    response = slack_web_client.chat_postMessage(**message)
+    welcome.timestamp = response['ts']
+    welcome_messages[channel][user] = welcome
+
+def add_integration(channel, user, text):
+    if user not in welcome_messages[channel] and user != BOT_ID:
+        return
+    data = DataBot(channel)
+    message = data.set_integration(text)
+    result = message['result']
+    print(result)
+    message = message['message']
+    response = slack_web_client.chat_postMessage(**message)
+    data.timestamp = response['ts']
+    welcome_messages[channel][user] = data
+
 
 # When a 'message' event is detected by the events adapter, forward that payload
 # to this function.
@@ -47,19 +74,40 @@ def message(payload):
 
     # Get the text from the event that came through
     text = event.get("text")
+    # Get the channel ID from the event that came through
+    channel_id = event.get("channel")
+    # Get the user ID from the event that came through
+    user_id = event.get('user')
 
-    if "daily data" in text.lower():
-        # Since the activation phrase was met, get the channel ID that the event
-        # was executed on
-        channel_id = event.get("channel")
-        # Fetch daily data
-        return fetch_data_action(channel_id, action="daily")
-    elif "monthly data" in text.lower():
-        # Since the activation phrase was met, get the channel ID that the event
-        # was executed on
-        channel_id = event.get("channel")
-        # Fetch daily data
-        return fetch_data_action(channel_id, action="monthly")
+    if user_id != None and BOT_ID != user_id:
+        if "daily data" in text.lower():
+            # Fetch daily data
+            return fetch_data_action(channel_id, action="daily")
+        elif "monthly data" in text.lower():
+            # Fetch monthly data
+            return fetch_data_action(channel_id, action="monthly")
+        elif text.lower() == 'start':
+            send_welcome_message(channel_id, user_id)
+        else:
+            add_integration(channel_id, user_id, text)
+
+@slack_events_adapter.on("reaction_added")
+def reaction_added(payload):
+    # Get the event data from the payload
+    event = payload.get("event", {})
+    # Get the channel ID from the event that came through
+    channel_id = event.get('item', {}).get("channel")
+    # Get the user ID from the event that came through
+    user_id = event.get('user')
+    if f'{channel_id}' not in welcome_messages:
+        return
+    welcome = welcome_messages[f'{channel_id}'][user_id]
+    welcome.completed = True
+    welcome.channel = channel_id
+    message = welcome.get_message()
+    updated_message = slack_web_client.chat_update(**message)
+    welcome.timestamp = updated_message['ts']
+
 
 if __name__ == "__main__":
     # Create the logging object
