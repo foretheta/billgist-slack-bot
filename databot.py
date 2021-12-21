@@ -483,10 +483,10 @@ class DataBot:
 
     # The constructor for the class. It takes the channel name as the a
     # parameter and then sets it as an instance variable
-    def __init__(self, channel):
+    def __init__(self, channel, integration_id):
         self.channel = channel
-        self.integration = None
         self.timestamp = ''
+        self.integration_id = integration_id
 
     # Fetch daily data for the user
     def get_daily_data(self):
@@ -502,9 +502,9 @@ class DataBot:
 
     # Fetch daily data for the user
     def get_monthly_data(self):
-        monthly_total = self.MONTHLY_DATA[self.integration]["total"]
-        integration_name = self.MONTHLY_DATA[self.integration]["name"]
-        credits = self.MONTHLY_DATA[self.integration]["credits_total"]
+        monthly_total = self.MONTHLY_DATA[self.integration_id]["total"]
+        integration_name = self.MONTHLY_DATA[self.integration_id]["name"]
+        credits = self.MONTHLY_DATA[self.integration_id]["credits_total"]
 
         monthly_text = {
             'type': 'section',
@@ -529,7 +529,6 @@ class DataBot:
         if integration_id == "dbfb3f08-a6c3-4c76-a104-40f7a9d243d6":
             message = "*Integration ID has been set!*"
             result = True
-            self.integration = integration_id
         else:
             message = "*Invalid integration ID, please send again!*"
             result = False

@@ -28,7 +28,10 @@ def fetch_data_action(channel, action=None, **kwargs):
     a kwarg of sides is passed in and it's a valid integer roll a dSIDES die
     """
     # Create a new CoinBot
-    random_bot = DataBot(channel)
+    if 'integration_id' not in welcome_messages[channel]:
+        return
+    integration_id = welcome_messages[channel]['integration_id']
+    random_bot = DataBot(channel, integration_id)
     if action == "daily":
         message = random_bot.get_daily_data()
     elif action == "monthly":
@@ -51,10 +54,12 @@ def send_welcome_message(channel, user):
 def add_integration(channel, user, text):
     if user not in welcome_messages[channel] and user != BOT_ID:
         return
-    data = DataBot(channel)
+    data = DataBot(channel, text)
     message = data.set_integration(text)
     result = message['result']
-    print(result)
+    if result:
+        welcome_messages[channel]['integration_id'] = text
+    print(welcome_messages)
     message = message['message']
     response = slack_web_client.chat_postMessage(**message)
     data.timestamp = response['ts']
