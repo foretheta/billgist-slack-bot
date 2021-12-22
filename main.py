@@ -7,6 +7,14 @@ from databot import DataBot
 from welcome import WelcomeMessage
 from pathlib import Path
 from dotenv import load_dotenv
+import boto3
+__TableName__ = "billgist-slack-bot"
+Primary_Coloumn_Name = "user_id"
+Sort_Key = "channel_id"
+client = boto3.resource('dynamodb', region_name='us-west-2')
+table = client.Table(__TableName__)
+
+
 
 
 env_path = Path('.') / '.env'
@@ -59,7 +67,6 @@ def add_integration(channel, user, text):
     result = message['result']
     if result:
         welcome_messages[channel]['integration_id'] = text
-    print(welcome_messages)
     message = message['message']
     response = slack_web_client.chat_postMessage(**message)
     data.timestamp = response['ts']
@@ -85,6 +92,12 @@ def message(payload):
     user_id = event.get('user')
 
     if user_id != None and BOT_ID != user_id:
+        table.put_item(
+            Item={
+                Primary_Coloumn_Name: user_id,
+                Sort_Key: channel_id
+            }
+        )
         if "daily data" in text.lower():
             # Fetch daily data
             return fetch_data_action(channel_id, action="daily")
@@ -113,6 +126,10 @@ def reaction_added(payload):
     updated_message = slack_web_client.chat_update(**message)
     welcome.timestamp = updated_message['ts']
 
+def fetch_data():
+    response = table.scan()
+    print(response)
+
 
 if __name__ == "__main__":
     # Create the logging object
@@ -123,6 +140,7 @@ if __name__ == "__main__":
 
     # Add the StreamHandler as a logging handler
     logger.addHandler(logging.StreamHandler())
+    fetch_data()
 
     # Run our app on our externally facing IP address on port 3000 instead of
     # running it on localhost, which is traditional for development.
