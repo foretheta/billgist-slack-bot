@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import logging
 from flask import Flask
@@ -31,15 +32,14 @@ BOT_ID = slack_web_client.api_call("auth.test")['user_id']
 welcome_messages = {}
 
 
-def fetch_data_action(channel, action=None, **kwargs):
+def fetch_data_action(user, channel, action=None, **kwargs):
     """Determine which action to perform based on parameter. For roll die if
     a kwarg of sides is passed in and it's a valid integer roll a dSIDES die
     """
     # Create a new CoinBot
     if 'integration_id' not in welcome_messages[channel]:
         return
-    integration_id = welcome_messages[channel]['integration_id']
-    random_bot = DataBot(channel, integration_id)
+    random_bot = DataBot(user, channel)
     if action == "daily":
         message = random_bot.get_daily_data()
     elif action == "monthly":
@@ -62,11 +62,19 @@ def send_welcome_message(channel, user):
 def add_integration(channel, user, text):
     if user not in welcome_messages[channel] and user != BOT_ID:
         return
-    data = DataBot(channel, text)
+    data = DataBot(user, channel)
     message = data.set_integration(text)
     result = message['result']
     if result:
         welcome_messages[channel]['integration_id'] = text
+        table.put_item(
+            Item={
+                Primary_Coloumn_Name: user,
+                Sort_Key: channel,
+                'integration_id': text,
+                'created_at': datetime.now().strftime("%A, %m/%d/%Y %H:%M %p")
+            }
+        )
     message = message['message']
     response = slack_web_client.chat_postMessage(**message)
     data.timestamp = response['ts']
@@ -92,18 +100,12 @@ def message(payload):
     user_id = event.get('user')
 
     if user_id != None and BOT_ID != user_id:
-        table.put_item(
-            Item={
-                Primary_Coloumn_Name: user_id,
-                Sort_Key: channel_id
-            }
-        )
         if "daily data" in text.lower():
             # Fetch daily data
-            return fetch_data_action(channel_id, action="daily")
+            return fetch_data_action(user_id, channel_id, action="daily")
         elif "monthly data" in text.lower():
             # Fetch monthly data
-            return fetch_data_action(channel_id, action="monthly")
+            return fetch_data_action(user_id, channel_id, action="monthly")
         elif text.lower() == 'start':
             send_welcome_message(channel_id, user_id)
         else:
@@ -126,22 +128,6 @@ def reaction_added(payload):
     updated_message = slack_web_client.chat_update(**message)
     welcome.timestamp = updated_message['ts']
 
-def fetch_data():
-    response = table.scan()
-    print(response)
-
 
 if __name__ == "__main__":
-    # Create the logging object
-    logger = logging.getLogger()
-
-    # Set the log level to DEBUG. This will increase verbosity of logging messages
-    logger.setLevel(logging.DEBUG)
-
-    # Add the StreamHandler as a logging handler
-    logger.addHandler(logging.StreamHandler())
-    fetch_data()
-
-    # Run our app on our externally facing IP address on port 3000 instead of
-    # running it on localhost, which is traditional for development.
     app.run(host='0.0.0.0', port=8080)

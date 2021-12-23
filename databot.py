@@ -1,7 +1,9 @@
-# import the random library to help us generate the random numbers
-import random
-
-# Create the DataBot Class
+import boto3
+__TableName__ = "billgist-slack-bot"
+Primary_Coloumn_Name = "user_id"
+Sort_Key = "channel_id"
+client = boto3.resource('dynamodb', region_name='us-west-2')
+table = client.Table(__TableName__)
 class DataBot:
 
     # Create a constant that contains the default text for the message
@@ -483,10 +485,10 @@ class DataBot:
 
     # The constructor for the class. It takes the channel name as the a
     # parameter and then sets it as an instance variable
-    def __init__(self, channel, integration_id):
+    def __init__(self, user, channel):
+        self.user = user
         self.channel = channel
         self.timestamp = ''
-        self.integration_id = integration_id
 
     # Fetch daily data for the user
     def get_daily_data(self):
@@ -526,6 +528,13 @@ class DataBot:
         }
 
     def set_integration(self, integration_id):
+        data = table.get_item(
+            Key={
+                Primary_Coloumn_Name: self.user,
+                Sort_Key: self.channel
+            }
+        )["Item"]
+        print(data["user_id"])
         if integration_id == "dbfb3f08-a6c3-4c76-a104-40f7a9d243d6":
             message = "*Integration ID has been set!*"
             result = True
