@@ -489,6 +489,7 @@ class DataBot:
         self.user = user
         self.channel = channel
         self.timestamp = ''
+        self.integration_id = ''
 
     # Fetch daily data for the user
     def get_daily_data(self):
@@ -504,21 +505,24 @@ class DataBot:
 
     # Fetch daily data for the user
     def get_monthly_data(self):
-        monthly_total = self.MONTHLY_DATA[self.integration_id]["total"]
-        integration_name = self.MONTHLY_DATA[self.integration_id]["name"]
-        credits = self.MONTHLY_DATA[self.integration_id]["credits_total"]
+        if(self.integration_id == ''):
+            monthly_text = "Integration Id not found"
+        else:
+            monthly_total = self.MONTHLY_DATA[self.integration_id]["total"]
+            integration_name = self.MONTHLY_DATA[self.integration_id]["name"]
+            credits = self.MONTHLY_DATA[self.integration_id]["credits_total"]
 
-        monthly_text = {
-            'type': 'section',
-            'text': {
-                'type': 'mrkdwn',
-                'text': (
-                    "*Here is your monthly data! *  \n\n"
-                    f"Integration *{integration_name}* has the monthly total of ${monthly_total} \n\n"
-                    f"your total credits are: ${credits}"
-                    )
+            monthly_text = {
+                'type': 'section',
+                'text': {
+                    'type': 'mrkdwn',
+                    'text': (
+                        "*Here is your monthly data! *  \n\n"
+                        f"Integration *{integration_name}* has the monthly total of ${monthly_total} \n\n"
+                        f"your total credits are: ${credits}"
+                        )
+                }
             }
-        }
 
         return {
             "channel": self.channel,
@@ -534,8 +538,9 @@ class DataBot:
                 Sort_Key: self.channel
             }
         )["Item"]
-        print(data["user_id"])
-        if integration_id == "dbfb3f08-a6c3-4c76-a104-40f7a9d243d6":
+        new_integration_id = data["integration_id"]
+        if integration_id == new_integration_id:
+            self.integration_id = new_integration_id
             message = "*Integration ID has been set!*"
             result = True
         else:
